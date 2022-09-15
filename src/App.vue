@@ -3,13 +3,16 @@
     <app-alert :alert="alert" @close="alert = null"></app-alert>
   </div>
   <div class="container column">
-    <app-form @add-resume-option="addResumeOption"></app-form>
-    <app-resume-list :options="options"></app-resume-list>
+    <app-form @add="addResumeOption"></app-form>
+    <app-loader v-if="isLoading"></app-loader>
+    <app-resume-list v-else :options="options" @delete="removeResumeOption"></app-resume-list>
   </div>
-  <app-comments-list @error="setErrorAlert"></app-comments-list>
+  <app-comments-list @error="setAlert"></app-comments-list>
 </template>
 
 <script>
+import axios from 'axios'
+import AppLoader from '@/AppLoader'
 import AppAlert from '@/AppAlert'
 import AppForm from '@/AppForm'
 import AppResumeList from '@/AppResumeList'
@@ -23,20 +26,56 @@ export default {
       options: []
     }
   },
+  mounted () {
+    this.loadResumeOptions()
+  },
   methods: {
-    addResumeOption (form) {
-      this.options.push(form)
-      console.log(this.options)
+    async addResumeOption (form) {
+      const { data } = await axios.post('https://resume-builder-vue-default-rtdb.firebaseio.com/resume-list.json', form)
+      this.options.push({
+        id: data.name,
+        ...form
+      })
     },
-    setErrorAlert (message) {
+    async loadResumeOptions () {
+      this.isLoading = true
+      try {
+        const { data } = await axios.get('https://resume-builder-vue-default-rtdb.firebaseio.com/resume-list.json')
+        if (!data) {
+          throw new Error('Список резюме пуст')
+        }
+        this.options = Object.keys(data).map(key => {
+          return {
+            id: key,
+            ...data[key]
+          }
+        })
+      } catch (e) {
+        this.setAlert(e.message)
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async removeResumeOption (id) {
+      try {
+        await axios.delete(`https://resume-builder-vue-default-rtdb.firebaseio.com/resume-list/${id}.json`)
+        const removedOptionType = this.options.find(option => option.id === id).type
+        this.options = this.options.filter(option => option.id !== id)
+        this.setAlert(`Опция "${removedOptionType}" была удалена`, 'Успешно!', 'primary')
+      } catch (e) {
+        this.setAlert(e.message)
+      }
+    },
+    setAlert (message, title = 'Ошибка!', type = 'danger') {
       this.alert = {
-        title: 'Ошибка!',
-        type: 'danger',
+        title: title,
+        type: type,
         text: message
       }
     }
   },
   components: {
+    AppLoader,
     AppAlert,
     AppForm,
     AppResumeList,
@@ -44,16 +83,3 @@ export default {
   }
 }
 </script>
-
-<style>
-  .avatar {
-    display: flex;
-    justify-content: center;
-  }
-
-  .avatar img {
-    width: 150px;
-    height: auto;
-    border-radius: 50%;
-  }
-</style>

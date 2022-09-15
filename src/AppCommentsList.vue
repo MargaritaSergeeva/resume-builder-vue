@@ -28,13 +28,16 @@ import AppButton from '@/AppButton'
 import AppLoader from '@/AppLoader'
 
 export default {
-  emits: ['error'],
+  emits: {
+    error: payload => {
+      return typeof payload === 'string'
+    }
+  },
   data () {
     return {
       isLoading: false,
       isShowedComments: false,
-      comments: [],
-      alert: null
+      comments: []
     }
   },
   methods: {
