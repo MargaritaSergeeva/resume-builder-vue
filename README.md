@@ -1,5 +1,8 @@
 # resume-builder-vue
 
+## Deploy
+See https://resume-builder-vue.web.app/
+
 ## Project setup
 ```
 npm install
